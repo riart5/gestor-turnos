@@ -19,6 +19,12 @@
   --n-bg: #e0e7ff;
   --n-fg: #3730a3;
 
+  /* Vacaciones y asuntos propios */
+  --vac-bg: #dcfce7;
+  --vac-fg: #166534;
+  --ap-bg: #fce7f3;
+  --ap-fg: #9d174d;
+
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -223,6 +229,51 @@ button:focus-visible {
 .shift-bg-N {
   background: var(--n-bg);
   color: var(--n-fg);
+}
+
+/* ---------- Vacaciones y asuntos propios ---------- */
+.absence-bg-VACATION {
+  background: var(--vac-bg);
+  color: var(--vac-fg);
+}
+.absence-bg-PERSONAL {
+  background: var(--ap-bg);
+  color: var(--ap-fg);
+}
+.cal-cell[class*='absence-bg'] {
+  border-color: transparent;
+}
+.absence-chip {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.balance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.balance-item {
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.balance-item strong {
+  font-size: 1.3rem;
+}
+.balance-item small {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.absence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* ---------- Layout ---------- */

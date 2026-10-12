@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { requireSupervisor } from '../middleware/auth.js';
-import { badRequest, notFound } from '../lib/errors.js';
+import { badRequest, conflict, notFound } from '../lib/errors.js';
+import { ABSENCE_TYPES } from '../lib/absenceTypes.js';
 import { SHIFT_TYPE_KEYS, describeShift } from '../lib/shiftTypes.js';
 import { notify } from '../lib/notify.js';
 import { publicUserSelect } from '../lib/publicUser.js';
@@ -41,6 +42,11 @@ async function assertUserInUnit(userId, unitId) {
   if (!user || user.unitId !== unitId) throw badRequest('El usuario no pertenece a tu planta');
 }
 
+async function assertNotAbsent(userId, date) {
+  const absence = await prisma.absence.findUnique({ where: { userId_date: { userId, date } } });
+  if (absence) throw conflict(`Ese día está marcado como ${ABSENCE_TYPES[absence.type].label.toLowerCase()}`);
+}
+
 async function findUnitShift(id, unitId) {
   const shift = await prisma.shift.findUnique({ where: { id } });
   if (!shift || shift.unitId !== unitId) throw notFound('Turno no encontrado');
@@ -61,6 +67,7 @@ function cancelPendingSwapsFor(shiftId) {
 router.post('/', requireSupervisor, async (req, res) => {
   const data = shiftSchema.parse(req.body);
   await assertUserInUnit(data.userId, req.user.unitId);
+  await assertNotAbsent(data.userId, data.date);
   const shift = await prisma.shift.create({
     data: { ...data, unitId: req.user.unitId },
     include: { user: { select: publicUserSelect } },
@@ -74,6 +81,7 @@ router.patch('/:id', requireSupervisor, async (req, res) => {
   const before = await findUnitShift(id, req.user.unitId);
   const data = shiftSchema.partial().parse(req.body);
   if (data.userId) await assertUserInUnit(data.userId, req.user.unitId);
+  if (data.userId || data.date) await assertNotAbsent(data.userId ?? before.userId, data.date ?? before.date);
 
   const shift = await prisma.shift.update({
     where: { id },

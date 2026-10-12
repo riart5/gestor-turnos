@@ -21,6 +21,7 @@ En muchas plantas hospitalarias los turnos se gestionan con hojas impresas, grup
 | Proponer un **intercambio** o **ceder** un turno a un compañero | Aprobar o denegar los intercambios aceptados |
 | Aceptar o rechazar propuestas recibidas | Ver la **cobertura** por turno y día (marca en rojo los huecos) |
 | Avisos de cada cambio que le afecta | Dar de alta personal en su planta |
+| Marcar **vacaciones** (23 días/año) y **asuntos propios** (6 días/año) en su calendario | Ver las ausencias en el cuadrante y recibir aviso de cada una |
 
 ### Flujo de un intercambio
 
@@ -43,6 +44,8 @@ stateDiagram-v2
 - Los conflictos se comprueban al crear la propuesta y **otra vez al aprobarla**, dentro de una transacción, porque el cuadrante puede haber cambiado entre medias.
 - Si la supervisión modifica un turno, se cancelan los intercambios pendientes que lo incluyen.
 - Al aprobar un intercambio, se cancelan las demás propuestas pendientes sobre esos mismos turnos.
+- Cada sanitario tiene 23 días de vacaciones y 6 de asuntos propios por año natural. Si pide un día en el que tenía turno, el turno se libera y la supervisión recibe un aviso para cubrirlo.
+- No se puede asignar ni recibir por intercambio un turno en un día de vacaciones o asunto propio.
 
 ## Stack
 
@@ -116,12 +119,15 @@ frontend/
 | POST | `/api/swaps/:id/cancel` | quien lo propuso |
 | POST | `/api/swaps/:id/approve` · `deny` | supervisor |
 | GET | `/api/notifications` · POST `/:id/read` · `/read-all` | autenticado |
+| GET / POST | `/api/absences?from&to&userId` | autenticado (su planta / sus días) |
+| GET | `/api/absences/balance?year` | autenticado (su saldo) |
+| DELETE | `/api/absences/:id` | quien pidió el día |
 
 ## Próximos pasos
 
 - [ ] Despliegue (Render/Railway + PostgreSQL en Neon)
 - [ ] Notificaciones push o por email
-- [ ] Solicitud de días libres y vacaciones
+- [x] Solicitud de días libres y vacaciones
 - [ ] Bolsa de turnos: publicar un turno para que lo coja cualquier compañero
 - [ ] Reglas de descanso mínimo entre turnos (por ejemplo, no encadenar noche y mañana)
 - [ ] Exportar el cuadrante a PDF o iCal

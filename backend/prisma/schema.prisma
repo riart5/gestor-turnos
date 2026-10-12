@@ -11,8 +11,9 @@ datasource db {
 model Unit {
   id     Int     @id @default(autoincrement())
   name   String
-  users  User[]
-  shifts Shift[]
+  users    User[]
+  shifts   Shift[]
+  absences Absence[]
 }
 
 model User {
@@ -30,6 +31,7 @@ model User {
   swapsRequested   SwapRequest[]  @relation("SwapRequester")
   swapsReceived    SwapRequest[]  @relation("SwapTarget")
   notifications    Notification[]
+  absences         Absence[]
 }
 
 model Shift {
@@ -72,6 +74,22 @@ model SwapRequest {
   resolvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+}
+
+// Día de vacaciones o asunto propio que el sanitario se marca en su calendario
+model Absence {
+  id        Int      @id @default(autoincrement())
+  date      String   // "YYYY-MM-DD"
+  type      String   // "VACATION" | "PERSONAL"
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId    Int
+  unit      Unit     @relation(fields: [unitId], references: [id])
+  createdAt DateTime @default(now())
+
+  // Un día solo puede contar como un tipo de ausencia
+  @@unique([userId, date])
+  @@index([unitId, date])
 }
 
 model Notification {

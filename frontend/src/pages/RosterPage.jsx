@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { useFetch } from '../lib/useFetch.js';
 import { daysInMonth, fromISO, isWeekend, longDate, monthRange, todayISO } from '../lib/dates.js';
 import { SHIFT_TYPES } from '../lib/shifts.js';
+import { ABSENCE_TYPES } from '../lib/absences.js';
 
 export default function RosterPage() {
   const { user, isSupervisor } = useAuth();
@@ -18,6 +19,7 @@ export default function RosterPage() {
   const { from, to } = monthRange(year, month);
   const { data: users, reload: reloadUsers } = useFetch('/users');
   const { data: shifts, reload } = useFetch(`/shifts?from=${from}&to=${to}`);
+  const { data: absences } = useFetch(`/absences?from=${from}&to=${to}`);
 
   const staff = (users ?? []).filter((u) => u.role === 'STAFF');
   const days = daysInMonth(year, month);
@@ -25,6 +27,8 @@ export default function RosterPage() {
 
   const grid = {};
   for (const s of shifts ?? []) grid[`${s.userId}|${s.date}`] = s;
+  const absent = {};
+  for (const a of absences ?? []) absent[`${a.userId}|${a.date}`] = a;
 
   const coverage = (date, type) => (shifts ?? []).filter((s) => s.date === date && s.type === type).length;
 
@@ -41,8 +45,8 @@ export default function RosterPage() {
         </div>
         <p className="hint">
           {isSupervisor
-            ? 'Pulsa una celda para asignar, cambiar o quitar un turno. El sanitario recibirá un aviso.'
-            : 'Cuadrante completo de tu planta. Tu fila aparece resaltada.'}
+            ? 'Pulsa una celda para asignar, cambiar o quitar un turno. El sanitario recibirá un aviso. V = vacaciones, AP = asunto propio.'
+            : 'Cuadrante completo de tu planta. Tu fila aparece resaltada. V = vacaciones, AP = asunto propio.'}
         </p>
 
         <div className="roster-scroll">
@@ -69,7 +73,16 @@ export default function RosterPage() {
                   </th>
                   {days.map((date) => {
                     const s = grid[`${member.id}|${date}`];
-                    const content = s ? <ShiftChip type={s.type} /> : <span className="free">·</span>;
+                    const a = absent[`${member.id}|${date}`];
+                    const content = s ? (
+                      <ShiftChip type={s.type} />
+                    ) : a ? (
+                      <span className={`absence-chip absence-bg-${a.type}`} title={ABSENCE_TYPES[a.type].label}>
+                        {ABSENCE_TYPES[a.type].short}
+                      </span>
+                    ) : (
+                      <span className="free">·</span>
+                    );
                     return (
                       <td key={date} className={isWeekend(date) ? 'weekend' : ''}>
                         {isSupervisor ? (
