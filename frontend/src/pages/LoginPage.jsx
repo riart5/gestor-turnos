@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import Icon from '../components/Icon.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../lib/auth.jsx';
 
 // Cuentas del seed para que cualquiera pueda probar la demo
@@ -32,9 +34,36 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <ThemeToggle className="login-theme" />
+      <aside className="login-hero">
+        <div className="brand">
+          <span className="brand-mark">
+            <Icon name="cross" size={18} />
+          </span>
+          <strong>Gestor de Turnos</strong>
+        </div>
+        <div className="login-hero-copy">
+          <h2>Cuida de tus pacientes. Nosotros cuidamos de tu cuadrante.</h2>
+          <ul>
+            <li>
+              <Icon name="calendar" /> Consulta tus turnos y pide días libres
+            </li>
+            <li>
+              <Icon name="swap" /> Intercambia turnos con tu equipo
+            </li>
+            <li>
+              <Icon name="shield" /> Aprobación de supervisión integrada
+            </li>
+          </ul>
+        </div>
+        <small>Hecho para equipos sanitarios</small>
+      </aside>
+
       <div className="login-card">
         <div className="login-brand">
-          <span className="brand-mark big">✚</span>
+          <span className="brand-mark big">
+            <Icon name="cross" size={26} />
+          </span>
           <h1>Gestor de Turnos</h1>
           <p className="muted">Tus turnos, tus cambios y tu planta, en un solo sitio.</p>
         </div>
