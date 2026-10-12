@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import MonthNav from '../components/MonthNav.jsx';
+import Icon from '../components/Icon.jsx';
 import ShiftChip from '../components/ShiftChip.jsx';
 import SwapModal from '../components/SwapModal.jsx';
 import { useAuth } from '../lib/auth.jsx';
@@ -75,12 +76,17 @@ export default function CalendarPage() {
       )}
 
       {next && (
-        <section className={`next-shift shift-bg-${next.type}`}>
-          <span className="eyebrow">{next.date === today ? 'Hoy trabajas' : 'Tu próximo turno'}</span>
-          <h2>
-            {SHIFT_TYPES[next.type].label} · {longDate(next.date)}
-          </h2>
-          <span>{SHIFT_TYPES[next.type].hours}</span>
+        <section className="next-shift">
+          <div className="next-shift-text">
+            <span className="eyebrow">{next.date === today ? 'Hoy trabajas' : 'Tu próximo turno'}</span>
+            <h2>
+              {SHIFT_TYPES[next.type].label} · {longDate(next.date)}
+            </h2>
+            <span className="next-shift-hours">
+              <Icon name="clock" size={16} /> {SHIFT_TYPES[next.type].hours}
+            </span>
+          </div>
+          <span className={`next-shift-badge shift-bg-${next.type}`}>{next.type}</span>
         </section>
       )}
 
