@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Una planta / unidad del hospital (ej. "Planta 3 - Medicina Interna")
+model Unit {
+  id     Int     @id @default(autoincrement())
+  name   String
+  users  User[]
+  shifts Shift[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   // "SUPERVISOR" | "STAFF"
+  position     String   // "Enfermería", "TCAE", "Medicina"...
+  unitId       Int
+  unit         Unit     @relation(fields: [unitId], references: [id])
+  createdAt    DateTime @default(now())
+
+  shifts           Shift[]
+  swapsRequested   SwapRequest[]  @relation("SwapRequester")
+  swapsReceived    SwapRequest[]  @relation("SwapTarget")
+  notifications    Notification[]
+}
+
+model Shift {
+  id        Int      @id @default(autoincrement())
+  date      String   // "YYYY-MM-DD" (día de inicio del turno)
+  type      String   // "M" mañana | "T" tarde | "N" noche
+  notes     String?
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  unitId    Int
+  unit      Unit     @relation(fields: [unitId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  swapsAsOffered   SwapRequest[] @relation("OfferedShift")
+  swapsAsRequested SwapRequest[] @relation("RequestedShift")
+
+  // Un sanitario no puede tener dos turnos el mismo día
+  @@unique([userId, date])
+  @@index([unitId, date])
+}
+
+// Flujo: PENDING_PEER -> (compañero acepta) -> PENDING_SUPERVISOR -> APPROVED
+//        en cualquier punto pendiente: REJECTED / CANCELLED
+model SwapRequest {
+  id               Int       @id @default(autoincrement())
+  status           String    @default("PENDING_PEER")
+  message          String?
+  requesterId      Int
+  requester        User      @relation("SwapRequester", fields: [requesterId], references: [id])
+  targetId         Int
+  target           User      @relation("SwapTarget", fields: [targetId], references: [id])
+  // Turno que el solicitante entrega
+  offeredShiftId   Int
+  offeredShift     Shift     @relation("OfferedShift", fields: [offeredShiftId], references: [id], onDelete: Cascade)
+  // Turno del compañero que recibe a cambio (null = cesión sin devolución)
+  requestedShiftId Int?
+  requestedShift   Shift?    @relation("RequestedShift", fields: [requestedShiftId], references: [id], onDelete: Cascade)
+  resolvedById     Int?
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
