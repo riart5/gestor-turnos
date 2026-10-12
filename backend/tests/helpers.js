@@ -15,6 +15,7 @@ export function dayOffset(days) {
 
 export async function resetDb() {
   await prisma.notification.deleteMany();
+  await prisma.absence.deleteMany();
   await prisma.swapRequest.deleteMany();
   await prisma.shift.deleteMany();
   await prisma.user.deleteMany();

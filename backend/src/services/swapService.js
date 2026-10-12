@@ -20,7 +20,8 @@ async function getSwapOrThrow(id, db = prisma) {
 }
 
 /**
- * Comprueba que, tras el intercambio, nadie acaba con dos turnos el mismo día.
+ * Comprueba que, tras el intercambio, nadie acaba con dos turnos el mismo día
+ * ni con un turno en un día de vacaciones o asunto propio.
  * Se ejecuta al crear la solicitud y otra vez al aprobarla, porque el
  * cuadrante puede haber cambiado entre medias.
  */
@@ -35,7 +36,13 @@ async function assertNoConflicts({ requesterId, targetId, offeredShift, requeste
   if (targetBusy) {
     throw conflict(`El compañero ya tiene un turno el ${offeredShift.date}`);
   }
+  if (await db.absence.findUnique({ where: { userId_date: { userId: targetId, date: offeredShift.date } } })) {
+    throw conflict(`El compañero tiene ese día libre por vacaciones o asunto propio (${offeredShift.date})`);
+  }
   if (requestedShift) {
+    if (await db.absence.findUnique({ where: { userId_date: { userId: requesterId, date: requestedShift.date } } })) {
+      throw conflict(`Tienes el ${requestedShift.date} marcado como vacaciones o asunto propio`);
+    }
     const requesterBusy = await db.shift.findFirst({
       where: { userId: requesterId, date: requestedShift.date, id: { not: offeredShift.id } },
     });

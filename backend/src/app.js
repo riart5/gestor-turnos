@@ -7,6 +7,7 @@ import userRoutes from './routes/users.js';
 import shiftRoutes from './routes/shifts.js';
 import swapRoutes from './routes/swaps.js';
 import notificationRoutes from './routes/notifications.js';
+import absenceRoutes from './routes/absences.js';
 
 export function createApp() {
   const app = express();
@@ -19,6 +20,7 @@ export function createApp() {
   app.use('/api/shifts', requireAuth, shiftRoutes);
   app.use('/api/swaps', requireAuth, swapRoutes);
   app.use('/api/notifications', requireAuth, notificationRoutes);
+  app.use('/api/absences', requireAuth, absenceRoutes);
 
   app.use('/api', (req, res, next) => next(notFound('Ruta no encontrada')));
   app.use(errorHandler);

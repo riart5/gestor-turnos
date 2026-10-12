@@ -7,6 +7,8 @@ import { useAuth } from '../lib/auth.jsx';
 import { useFetch } from '../lib/useFetch.js';
 import { WEEKDAYS, addDays, longDate, monthRange, monthWeeks, todayISO } from '../lib/dates.js';
 import { SHIFT_TYPES } from '../lib/shifts.js';
+import { ABSENCE_TYPES } from '../lib/absences.js';
+import { api } from '../lib/api.js';
 
 export default function CalendarPage() {
   const { user, isSupervisor } = useAuth();
@@ -15,6 +17,8 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState(null);
   const [swapFor, setSwapFor] = useState(null);
   const [flash, setFlash] = useState(null);
+  const [absenceError, setAbsenceError] = useState(null);
+  const [savingAbsence, setSavingAbsence] = useState(false);
 
   const { from, to } = monthRange(year, month);
   const { data: shifts, reload } = useFetch(`/shifts?from=${from}&to=${to}&userId=${user.id}`);
@@ -23,6 +27,8 @@ export default function CalendarPage() {
     `/shifts?from=${today}&to=${addDays(today, 30)}&userId=${user.id}`,
   );
   const { data: swaps, reload: reloadSwaps } = useFetch('/swaps');
+  const { data: absences, reload: reloadAbsences } = useFetch(`/absences?from=${from}&to=${to}&userId=${user.id}`);
+  const { data: balance, reload: reloadBalance } = useFetch(`/absences/balance?year=${year}`);
 
   const byDate = Object.fromEntries((shifts ?? []).map((s) => [s.date, s]));
   const next = upcoming?.[0];
@@ -34,6 +40,31 @@ export default function CalendarPage() {
 
   const counts = (shifts ?? []).reduce((acc, s) => ({ ...acc, [s.type]: (acc[s.type] ?? 0) + 1 }), {});
   const selectedShift = selected && byDate[selected];
+  const absenceByDate = Object.fromEntries((absences ?? []).map((a) => [a.date, a]));
+  const selectedAbsence = selected && absenceByDate[selected];
+
+  async function addAbsence(type) {
+    if (selectedShift && !window.confirm(`Ese día tienes turno de ${SHIFT_TYPES[selectedShift.type].label.toLowerCase()}. Se liberará y la supervisión recibirá un aviso. ¿Continuar?`)) return;
+    await changeAbsence(() => api.post('/absences', { date: selected, type }), `${ABSENCE_TYPES[type].label}: ${longDate(selected)} ✅`);
+  }
+
+  async function removeAbsence() {
+    await changeAbsence(() => api.delete(`/absences/${selectedAbsence.id}`), 'Día anulado. Lo recuperas en tu saldo.');
+  }
+
+  async function changeAbsence(action, message) {
+    setSavingAbsence(true);
+    setAbsenceError(null);
+    try {
+      await action();
+      setFlash(message);
+      await Promise.all([reload(), reloadUpcoming(), reloadAbsences(), reloadBalance()]);
+    } catch (err) {
+      setAbsenceError(err.message);
+    } finally {
+      setSavingAbsence(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -71,6 +102,21 @@ export default function CalendarPage() {
           <span className="summary-item muted">{shifts?.length ?? 0} turnos este mes</span>
         </div>
 
+        {balance && (
+          <div className="balance">
+            {Object.entries(ABSENCE_TYPES).map(([k, t]) => (
+              <div key={k} className={`balance-item absence-bg-${k}`}>
+                <span className="eyebrow">
+                  {t.icon} {t.label} {year}
+                </span>
+                <strong>
+                  {balance[k].remaining} <small>de {balance[k].allowance} disponibles</small>
+                </strong>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="calendar">
           {WEEKDAYS.map((d) => (
             <div key={d} className="cal-head">
@@ -82,19 +128,29 @@ export default function CalendarPage() {
             .map((date, i) => {
               if (!date) return <div key={`e${i}`} className="cal-cell empty" />;
               const s = byDate[date];
+              const a = absenceByDate[date];
               const cls = [
                 'cal-cell',
                 date === today && 'today',
                 date < today && 'past',
                 selected === date && 'selected',
                 s && `shift-bg-${s.type}`,
+                a && `absence-bg-${a.type}`,
               ]
                 .filter(Boolean)
                 .join(' ');
               return (
-                <button key={date} className={cls} onClick={() => setSelected(date)}>
+                <button key={date} className={cls} onClick={() => {
+                  setSelected(date);
+                  setAbsenceError(null);
+                }}>
                   <span className="cal-day">{Number(date.slice(8))}</span>
                   {s && <span className="cal-type">{SHIFT_TYPES[s.type].label}</span>}
+                  {a && (
+                    <span className="cal-type">
+                      {ABSENCE_TYPES[a.type].icon} {ABSENCE_TYPES[a.type].label}
+                    </span>
+                  )}
                   {s && pendingShiftIds.has(s.id) && <span className="cal-dot" title="Intercambio en curso" />}
                 </button>
               );
@@ -121,9 +177,39 @@ export default function CalendarPage() {
                 </button>
               ) : null}
             </>
+          ) : selectedAbsence ? (
+            <p>
+              <span className={`absence-chip absence-bg-${selectedAbsence.type}`}>
+                {ABSENCE_TYPES[selectedAbsence.type].icon} {ABSENCE_TYPES[selectedAbsence.type].label}
+              </span>
+            </p>
           ) : (
             <p className="muted">Día libre 🌿</p>
           )}
+
+          {selected >= today &&
+            (selectedAbsence ? (
+              <button className="btn ghost" disabled={savingAbsence} onClick={removeAbsence}>
+                Anular {ABSENCE_TYPES[selectedAbsence.type].label.toLowerCase()}
+              </button>
+            ) : (
+              balance &&
+              Number(selected.slice(0, 4)) === year && (
+                <div className="absence-actions">
+                  {Object.entries(ABSENCE_TYPES).map(([k, t]) => (
+                    <button
+                      key={k}
+                      className="btn"
+                      disabled={savingAbsence || balance[k].remaining <= 0}
+                      onClick={() => addAbsence(k)}
+                    >
+                      {t.icon} Pedir {t.label.toLowerCase()} <small className="muted">({balance[k].remaining})</small>
+                    </button>
+                  ))}
+                </div>
+              )
+            ))}
+          {absenceError && <p className="alert bad">{absenceError}</p>}
         </section>
       )}
 

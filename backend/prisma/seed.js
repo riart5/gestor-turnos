@@ -20,6 +20,7 @@ const STAFF = [
 
 async function main() {
   await prisma.notification.deleteMany();
+  await prisma.absence.deleteMany();
   await prisma.swapRequest.deleteMany();
   await prisma.shift.deleteMany();
   await prisma.user.deleteMany();
