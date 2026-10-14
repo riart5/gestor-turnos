@@ -1,4 +1,4 @@
-# Gestor de Turnos 🏥
+# Gestor de Turnos 
 
 Aplicación web para que el **personal sanitario** y su **supervisor/a de planta** gestionen los turnos sin perder información: cada sanitario consulta su calendario, propone intercambios a compañeros y la supervisión los aprueba con un clic. El cuadrante se actualiza solo y todos reciben un aviso.
 
